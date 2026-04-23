@@ -28,6 +28,17 @@ requireRole(['jefe_departamento', 'admin']);
             </div>
             
             <div class="page-content">
+            
+                <!-- SECCION INCUMPLIMIENTOS -->
+                <div class="card" id="incumplimientosCard" style="background: #fef2f2; border-left: 4px solid #dc2626; display: none;">
+                    <div class="card-header" style="background: #dc2626; color: white; border-radius: 6px 6px 0 0; margin: -16px -16px 16px -16px; padding: 16px;">
+                        <div class="card-title" style="color: white; font-weight: 600;">⚠️ Incumplimientos detectados hoy</div>
+                        <span id="contadorIncumplimientos" style="background: white; color: #dc2626; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">0</span>
+                    </div>
+                    <div id="listaIncumplimientos">
+                    </div>
+                </div>
+            
                 <div class="grid grid-4">
                     <div class="card stat-card">
                         <div class="stat-value">42</div>
@@ -108,5 +119,53 @@ requireRole(['jefe_departamento', 'admin']);
             </div>
         </div>
     </div>
+    
+    <script>
+    async function cargarIncumplimientos() {
+        try {
+            const res = await fetch('../api/incumplimientos.php');
+            const data = await res.json();
+            
+            const card = document.getElementById('incumplimientosCard');
+            const lista = document.getElementById('listaIncumplimientos');
+            const contador = document.getElementById('contadorIncumplimientos');
+            
+            if (data.success && data.data.length > 0) {
+                card.style.display = 'block';
+                contador.textContent = data.total;
+                
+                let html = '';
+                data.data.forEach(inc => {
+                    let tipoTexto = {
+                        'retraso': 'Retraso',
+                        'salida_anticipada': 'Salida Anticipada',
+                        'ausencia': 'Ausencia Sin Justificar',
+                        'horas_insuficientes': 'Horas Insuficientes'
+                    };
+                    
+                    html += `
+                    <div style="padding: 12px; background: white; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${inc.nombre}</strong>
+                            <div style="color: #dc2626; font-size: 13px;">${tipoTexto[inc.tipo] || inc.tipo} ${inc.minutos ? '(' + inc.minutos + ' min)' : ''}</div>
+                        </div>
+                        <button class="btn btn-small" style="background: #dc2626; color: white; border: none; font-size: 12px;">Notificar</button>
+                    </div>
+                    `;
+                });
+                
+                lista.innerHTML = html;
+            } else {
+                card.style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error cargando incumplimientos', e);
+        }
+    }
+    
+    // Cargar inmediatamente y luego cada 5 minutos
+    cargarIncumplimientos();
+    setInterval(cargarIncumplimientos, 300000);
+    </script>
 </body>
 </html>

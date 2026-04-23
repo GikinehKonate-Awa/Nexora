@@ -32,9 +32,9 @@ $proyectos = $stmt->fetchAll();
             <div class="page-content">
                 <div class="grid grid-3">
                     <?php foreach([
-                        ['nombre' => 'Plataforma Cliente Alpha', 'horas' => 245, 'total' => 500, 'estado' => 'En curso'],
-                        ['nombre' => 'Integración ERP', 'horas' => 120, 'total' => 180, 'estado' => 'En curso'],
-                        ['nombre' => 'Auditoría Seguridad', 'horas' => 78, 'total' => 80, 'estado' => 'Finalizando']
+                        ['nombre' => 'Plataforma Cliente Alpha', 'horas' => 245, 'total' => 500, 'presupuesto' => '75.000 €', 'gasto' => '38.500 €', 'estado' => 'En curso'],
+                        ['nombre' => 'Integración ERP', 'horas' => 120, 'total' => 180, 'presupuesto' => '42.000 €', 'gasto' => '29.200 €', 'estado' => 'En curso'],
+                        ['nombre' => 'Auditoría Seguridad', 'horas' => 78, 'total' => 80, 'presupuesto' => '18.000 €', 'gasto' => '17.100 €', 'estado' => 'Finalizando']
                     ] as $proyecto): ?>
                     <div class="card">
                         <h3 style="margin-bottom: 12px;"><?= $proyecto['nombre'] ?></h3>
@@ -45,6 +45,16 @@ $proyectos = $stmt->fetchAll();
                             </div>
                             <div style="height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden;">
                                 <div style="height:100%; background:#c9a84c; width:<?= round(($proyecto['horas']/$proyecto['total'])*100) ?>%"></div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size:12px; color:#6b7280;">Presupuesto</div>
+                                <div style="font-weight: bold; color:#1a2744;"><?= $proyecto['presupuesto'] ?></div>
+                            </div>
+                            <div>
+                                <div style="font-size:12px; color:#6b7280;">Gasto Real</div>
+                                <div style="font-weight: bold; color:#c9a84c;"><?= $proyecto['gasto'] ?></div>
                             </div>
                         </div>
                         <span class="badge badge-success"><?= $proyecto['estado'] ?></span>

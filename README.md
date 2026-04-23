@@ -1,6 +1,6 @@
 # NEXORA CONSULTING GROUP - Sistema de Control de Presencia
 
-Aplicación web de control de presencia desarrollada 100% con tecnologías nativas: **HTML5, CSS3, JavaScript Vanilla, PHP y MySQL**. Sin frameworks ni librerías externas de ningún tipo.
+Aplicación web de control de presencia desarrollada 100% con tecnologías nativas: **HTML5, CSS3, JavaScript Vanilla, PHP y MySQL**. 
 
 ---
 
@@ -47,28 +47,23 @@ El instalador realizará automáticamente:
 
 ---
 
-## 🔑 Credenciales de Acceso
+## 🔑 Credenciales de Acceso de Prueba
 
-### 👤 Empleados (Contraseña: `Nexora2025!`)
-| Nombre | Email |
-|---|---|
-| Marc Puig Ferrer | `marc.puig@nexora.com` |
-| Laura Gómez Vidal | `laura.gomez@nexora.com` |
-| Sofía Martín Ros | `sofia.martin@nexora.com` |
-| Andreu Sala Mas | `andreu.sala@nexora.com` |
+> ✅ **TODAS estas credenciales están ya creadas y listas para usar inmediatamente después de la instalación:**
 
-### 👔 Jefes de Departamento (Contraseña: `NexoraJefe2025!`)
-| Nombre | Departamento | Email |
-|---|---|---|
-| Elena Torres Bravo | Desarrollo | `elena.torres@nexora.com` |
-| Víctor Ruiz Camps | Contabilidad | `victor.ruiz@nexora.com` |
-| Núria Costa Prat | RRHH | `nuria.costa@nexora.com` |
-| Jordi Font Molina | Dirección | `jordi.font@nexora.com` |
+| Rol | Email | Contraseña | Permisos |
+|---|---|---|---|
+| 👤 **Empleado** | `marc.puig@nexora.com` | `Nexora2025!` | Acceso completo a módulo empleado |
+| 👤 **Empleado** | `laura.gomez@nexora.com` | `Nexora2025!` | Departamento Contabilidad |
+| 👤 **Empleado** | `sofia.martin@nexora.com` | `Nexora2025!` | Departamento RRHH |
+| 👤 **Empleado** | `andreu.sala@nexora.com` | `Nexora2025!` | Departamento Dirección |
+| 👔 **Jefe Departamento** | `elena.torres@nexora.com` | `NexoraJefe2025!` | Desarrollo |
+| 👔 **Jefe Departamento** | `victor.ruiz@nexora.com` | `NexoraJefe2025!` | Contabilidad |
+| 👔 **Jefe Departamento** | `nuria.costa@nexora.com` | `NexoraJefe2025!` | RRHH |
+| 👔 **Jefe Departamento** | `jordi.font@nexora.com` | `NexoraJefe2025!` | Dirección |
+| 🔐 **Administrador Global** | `admin@nexora.com` | `NexoraJefe2025!` | Acceso completo a TODA la empresa |
 
-### 🔐 Administrador / RRHH
-| Email | Contraseña |
-|---|---|
-| `admin@nexora.com` | `NexoraJefe2025!` |
+> 💡 **Recomendación**: Usa `marc.puig@nexora.com` para probar la experiencia como empleado normal y `admin@nexora.com` para ver todas las funcionalidades de supervisor.
 
 ---
 
@@ -147,6 +142,8 @@ Estructura creada siguiendo estrictamente el orden requerido:
 11. `logs_sistema`
 
 ---
+
+
 
 ## ✅ Aplicación 100% Finalizada
 

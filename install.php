@@ -44,6 +44,13 @@ foreach($steps as $step) {
     if(!$step['status']) $allOk = false;
 }
 
+function cleanInput($data) {
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data);
+    return $data;
+}
+
 // Paso 2: Crear base de datos e importar estructura
 if($allOk && $_SERVER['REQUEST_METHOD'] === 'POST') {
     
@@ -52,7 +59,7 @@ if($allOk && $_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         // Conectar a MySQL sin base de datos
-        $pdo = new PDO("mysql:host=localhost;charset=utf8mb4", $db_user, $db_pass, [
+        $pdo = new PDO("mysql:host=localhost:3306;charset=utf8mb4", $db_user, $db_pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
         
@@ -115,6 +122,18 @@ HTACCESS;
             'name' => 'Archivo .htaccess creado',
             'status' => true,
             'message' => 'Protección de archivos sensibles activada'
+        ];
+        
+        // Actualizar archivo config.php con credenciales
+        $configContent = file_get_contents(__DIR__ . '/config.php');
+        $configContent = preg_replace("/define\('DB_USER', '.*?'\);/", "define('DB_USER', '$db_user');", $configContent);
+        $configContent = preg_replace("/define\('DB_PASS', '.*?'\);/", "define('DB_PASS', '$db_pass');", $configContent);
+        file_put_contents(__DIR__ . '/config.php', $configContent);
+        
+        $steps[] = [
+            'name' => 'Archivo de configuración actualizado',
+            'status' => true,
+            'message' => 'Credenciales guardadas correctamente'
         ];
         
         // Crear archivo de bloqueo

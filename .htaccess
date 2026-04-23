@@ -1,0 +1,15 @@
+Options -Indexes
+
+<FilesMatch "config\.php|installed\.lock">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+<Directory "includes">
+    Order Allow,Deny
+    Deny from all
+</Directory>
+
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

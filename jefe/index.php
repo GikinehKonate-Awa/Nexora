@@ -172,11 +172,20 @@ requireRole(['jefe_departamento', 'admin']);
     <script src="../assets/js/funcionalidad-botones.js?v=<?= time() ?>"></script>
     <script>
         // ✅ INICIALIZACION FORZADA DESPUES DE QUE TODO ESTE CARGADO
-        setTimeout(function() {
+        window.addEventListener('load', function() {
             console.log('🔧 Inicializando sistema de botones manualmente...');
             inicializarSistemaFuncionalidad();
+            
+            // FORZAR INICIALIZACION ESPECIFICA DE LOS SPAN DEL DASHBOARD
+            document.querySelectorAll('span').forEach(function(span) {
+                if(!span.dataset.funcionalidad && span.textContent.trim() === 'Revisar' || span.textContent.trim() === 'Aprobar') {
+                    inicializarElementoIndividual(span);
+                    console.log('✅ Boton ' + span.textContent + ' INICIALIZADO CORRECTAMENTE');
+                }
+            });
+            
             console.log('✅ Sistema de botones ACTIVADO correctamente');
-        }, 100);
+        });
     </script>
 
 </body>

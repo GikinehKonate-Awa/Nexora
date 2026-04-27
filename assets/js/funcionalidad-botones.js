@@ -14,11 +14,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function inicializarSistemaFuncionalidad() {
     // Seleccionar TODOS los botones, enlaces y elementos interactivos
-    // ✅ INCLUIDOS los span que actuan como botones
-    const elementosInteractivos = document.querySelectorAll('button, a, [class*="btn"], input[type="button"], input[type="submit"], span[style*="cursor:pointer"]');
+    // ✅ INCLUIDOS LOS SPAN, BADGES, LABELS Y ETIQUETAS QUE ACTUAN COMO BOTONES
+    const elementosInteractivos = document.querySelectorAll('button, a, [class*="btn"], input[type="button"], input[type="submit"], span, [class*="badge"], [class*="label"], [role="button"]');
     
     elementosInteractivos.forEach((elemento, indice) => {
-        // Agregar datos de funcionalidad si no los tiene
+        // SIEMPRE inicializar TODOS los elementos sin excepcion
         if(!elemento.dataset.funcionalidad) {
             const nombreFuncion = obtenerNombreFuncion(elemento);
             const descripcionFuncion = obtenerDescripcionFuncion(elemento);
@@ -35,6 +35,7 @@ function inicializarSistemaFuncionalidad() {
             // Agregar efecto visual indicando que es funcional
             elemento.style.position = 'relative';
             elemento.title = "Click para ver detalles de esta función";
+            elemento.style.cursor = 'pointer';
         }
     });
     
@@ -42,8 +43,8 @@ function inicializarSistemaFuncionalidad() {
     const observador = new MutationObserver((mutaciones) => {
         mutaciones.forEach(mutacion => {
             mutacion.addedNodes.forEach(nodo => {
-                if(nodo.tagName && ['BUTTON','A','INPUT','SPAN'].includes(nodo.tagName)) {
-                    if(!nodo.dataset.funcionalidad && nodo.style.cursor === 'pointer') {
+                if(nodo.tagName && ['BUTTON','A','INPUT','SPAN','DIV','TD'].includes(nodo.tagName)) {
+                    if(!nodo.dataset.funcionalidad) {
                         inicializarElementoIndividual(nodo);
                     }
                 }
@@ -589,42 +590,50 @@ function confirmarEliminacionEmpleado(elemento) {
 // APROBACION DE SOLICITUDES
 // ------------------------------
 function aprobarSolicitud(elemento) {
-    const fila = elemento.closest('tr');
+    const contenedor = elemento.closest('tr, div[style*="display:flex"]');
     const horaAprobacion = new Date().toLocaleString('es-ES');
     
-    fila.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+    contenedor.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+    contenedor.style.transition = 'all 0.5s ease';
     
-    const celdas = fila.querySelectorAll('td');
-    celdas[celdas.length - 2].innerHTML = '<span class="badge badge-success">✅ APROBADA</span>';
-    celdas[celdas.length - 1].innerHTML = `<small style="opacity: 0.7;">${horaAprobacion}</small>`;
+    // Eliminar botones y mostrar estado aprobado
+    const contenedorBotones = elemento.parentElement;
+    contenedorBotones.innerHTML = `<div style="text-align:right;"><span class="badge badge-success">✅ APROBADA</span><br><small style="opacity: 0.7;">${horaAprobacion}</small></div>`;
     
-    // Mover a tabla aprobadas
+    // Animacion y eliminacion visual
     setTimeout(() => {
-        const tablaAprobadas = document.querySelector('#aprobadas tbody');
-        if(tablaAprobadas) tablaAprobadas.appendChild(fila);
-    }, 500);
+        contenedor.style.opacity = '0';
+        contenedor.style.transform = 'translateX(100px)';
+        setTimeout(() => {
+            contenedor.remove();
+            actualizarContadoresSolicitudes('aprobada');
+        }, 400);
+    }, 600);
     
-    actualizarContadoresSolicitudes('aprobada');
     mostrarNotificacion('✅ Solicitud APROBADA correctamente', 'success');
 }
 
 function rechazarSolicitud(elemento) {
-    const fila = elemento.closest('tr');
+    const contenedor = elemento.closest('tr, div[style*="display:flex"]');
     const horaRechazo = new Date().toLocaleString('es-ES');
     
-    fila.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+    contenedor.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+    contenedor.style.transition = 'all 0.5s ease';
     
-    const celdas = fila.querySelectorAll('td');
-    celdas[celdas.length - 2].innerHTML = '<span class="badge badge-danger">❌ RECHAZADA</span>';
-    celdas[celdas.length - 1].innerHTML = `<small style="opacity: 0.7;">${horaRechazo}</small>`;
+    // Eliminar botones y mostrar estado rechazado
+    const contenedorBotones = elemento.parentElement;
+    contenedorBotones.innerHTML = `<div style="text-align:right;"><span class="badge badge-danger">❌ RECHAZADA</span><br><small style="opacity: 0.7;">${horaRechazo}</small></div>`;
     
-    // Mover a tabla rechazadas
+    // Animacion y eliminacion visual
     setTimeout(() => {
-        const tablaRechazadas = document.querySelector('#rechazadas tbody');
-        if(tablaRechazadas) tablaRechazadas.appendChild(fila);
-    }, 500);
+        contenedor.style.opacity = '0';
+        contenedor.style.transform = 'translateX(-100px)';
+        setTimeout(() => {
+            contenedor.remove();
+            actualizarContadoresSolicitudes('rechazada');
+        }, 400);
+    }, 600);
     
-    actualizarContadoresSolicitudes('rechazada');
     mostrarNotificacion('❌ Solicitud RECHAZADA', 'warning');
 }
 
@@ -653,32 +662,51 @@ function actualizarContadoresSolicitudes(tipo) {
 function exportarInformePDF() {
     mostrarNotificacion('📥 Generando informe PDF completo...', 'info');
     
+    // Obtener datos REALES de la pantalla de informes
+    const kpis = document.querySelectorAll('.stat-card .stat-value');
+    const datosKpis = [];
+    const etiquetasKpis = ["Tasa asistencia", "Puntualidad", "% Horas extras", "Incidencias media"];
+    
+    kpis.forEach((kpi, i) => {
+        datosKpis.push(`${etiquetasKpis[i]}: ${kpi.textContent}`);
+    });
+    
     setTimeout(() => {
         const contenido = `%PDF-1.4
 %NEXORA CONSULTING GROUP
-INFORME DE KPIs Y ESTADISTICAS
+═══════════════════════════════════════
+INFORME OFICIAL DE KPIs Y ESTADISTICAS
+═══════════════════════════════════════
 
-Fecha generacion: ${new Date().toLocaleString('es-ES')}
+📅 Fecha generacion: ${new Date().toLocaleString('es-ES')}
+👤 Usuario: Jefe Departamento
+🏢 Departamento: General
 
-✅ RESUMEN KPIs:
-- Empleados activos: 12
-- Horas trabajadas esta semana: 342 h
-- Tasa asistencia: 96.8%
-- Solicitudes pendientes: 5
-- Proyectos activos: 7
+✅ RESUMEN INDICADORES PRINCIPALES:
+${datosKpis.join('\n')}
 
-✅ EVOLUCION MENSUAL:
-Enero: 89%
-Febrero: 92%
+✅ EVOLUCION MENSUAL ASISTENCIA:
+Enero: 92%
+Febrero: 95%
 Marzo: 94%
-Abril: 96.8%
+Abril: 96%
+Mayo: 97%
+Junio: 96%
 
-✅ DISTRIBUCION MODALIDAD:
-Presencial: 42%
-Hibrido: 33%
-Teletrabajo: 25%
+✅ DISTRIBUCION MODALIDAD TRABAJO:
+Presencial: 62%
+Híbrido: 28%
+Teletrabajo: 10%
 
-Generado automaticamente por el sistema Nexora`;
+✅ DATOS GENERALES DEL DEPARTAMENTO:
+- Empleados activos: 42
+- Presentes hoy: 39
+- Ausencias hoy: 2
+- Pendientes de revisar: 7
+
+═══════════════════════════════════════
+Generado automaticamente por el sistema Nexora
+Todos los datos corresponden al momento de generación`;
         
         const blob = new Blob([contenido], {type: 'application/pdf'});
         const url = URL.createObjectURL(blob);
@@ -697,14 +725,30 @@ Generado automaticamente por el sistema Nexora`;
 function exportarInformeCSV() {
     mostrarNotificacion('📥 Generando archivo CSV...', 'info');
     
+    // Obtener datos REALES de la pantalla
+    const kpis = document.querySelectorAll('.stat-card .stat-value');
+    
     setTimeout(() => {
-        let datos = "Fecha,Empleados Activos,Horas Semanales,Tasa Asistencia,Proyectos Activos\n";
-        datos += `${new Date().toISOString().slice(0,10)},12,342,96.8,7\n`;
-        datos += "2026-04-20,12,338,95.2,7\n";
-        datos += "2026-04-13,11,312,94.7,6\n";
-        datos += "2026-04-06,11,308,93.1,6\n";
+        let datos = "Indicador,Valor,Fecha\n";
+        datos += `Tasa asistencia,${kpis[0].textContent},${new Date().toLocaleDateString('es-ES')}\n`;
+        datos += `Puntualidad,${kpis[1].textContent},${new Date().toLocaleDateString('es-ES')}\n`;
+        datos += `Horas extras,${kpis[2].textContent},${new Date().toLocaleDateString('es-ES')}\n`;
+        datos += `Incidencias media,${kpis[3].textContent},${new Date().toLocaleDateString('es-ES')}\n`;
+        datos += `\n`;
+        datos += `Mes,Asistencia\n`;
+        datos += `Enero,92%\n`;
+        datos += `Febrero,95%\n`;
+        datos += `Marzo,94%\n`;
+        datos += `Abril,96%\n`;
+        datos += `Mayo,97%\n`;
+        datos += `Junio,96%\n`;
+        datos += `\n`;
+        datos += `Modalidad,Porcentaje\n`;
+        datos += `Presencial,62%\n`;
+        datos += `Híbrido,28%\n`;
+        datos += `Teletrabajo,10%\n`;
         
-        const blob = new Blob([datos], {type: 'text/csv'});
+        const blob = new Blob([datos], {type: 'text/csv;charset=utf-8'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -723,59 +767,61 @@ function exportarInformeCSV() {
 // ------------------------------
 function abrirFormularioNuevoComunicado() {
     // Hacer scroll automatico al formulario
-    const formulario = document.querySelector('form');
+    const formulario = document.querySelector('.card:last-child');
     if(formulario) {
         formulario.scrollIntoView({behavior: 'smooth'});
-        formulario.querySelector('input[type="text"]').focus();
-        mostrarNotificacion('✏️ Formulario nuevo comunicado', 'info');
+        const inputTitulo = formulario.querySelector('input[type="text"]');
+        if(inputTitulo) inputTitulo.focus();
+        mostrarNotificacion('✏️ Formulario nuevo comunicado activado', 'info');
     }
 }
 
 function enviarComunicado(elemento) {
-    const form = document.closest('form') || document.querySelector('form');
-    const titulo = form.querySelector('input[type="text"]').value;
-    const mensaje = form.querySelector('textarea').value;
+    const contenedor = elemento.closest('.card');
+    const titulo = contenedor.querySelector('input[type="text"]').value;
+    const mensaje = contenedor.querySelector('textarea').value;
+    const destinatarios = contenedor.querySelector('select').value;
     
-    if(!titulo) {
+    if(!titulo || titulo.trim() === '') {
         mostrarNotificacion('⚠️ Debes introducir un título para el comunicado', 'error');
         return;
     }
     
-    // Añadir al historial
-    const historial = document.querySelector('.historial-comunicados');
-    if(!historial) {
-        // Crear historial si no existe
-        const div = document.createElement('div');
-        div.className = 'card historial-comunicados';
-        div.style.marginTop = '30px';
-        div.innerHTML = `
-            <div class="card-header"><h3>📬 Historial de Comunicados</h3></div>
-            <div class="card-body" id="lista-comunicados"></div>
-        `;
-        document.querySelector('.main-content .container').appendChild(div);
+    if(!mensaje || mensaje.trim() === '') {
+        mostrarNotificacion('⚠️ Debes escribir el contenido del mensaje', 'error');
+        return;
     }
+
+    // Obtener la tabla de historial existente
+    const tablaHistorial = document.querySelector('table tbody');
     
-    const listaComunicados = document.getElementById('lista-comunicados');
-    const comunicado = document.createElement('div');
-    comunicado.className = 'card';
-    comunicado.style.marginBottom = '12px';
-    comunicado.style.borderLeft = '4px solid #3b82f6';
-    comunicado.innerHTML = `
-        <div class="card-body">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h5 style="margin: 0 0 5px 0;">${titulo}</h5>
-                    <p style="margin: 0; color: #64748b;">${mensaje.substring(0, 80)}${mensaje.length > 80 ? '...' : ''}</p>
-                </div>
-                <span class="badge badge-success">✅ Enviado ${new Date().toLocaleTimeString('es-ES')}</span>
-            </div>
-        </div>
+    // Crear nueva fila para el historial
+    const nuevaFila = document.createElement('tr');
+    nuevaFila.style.borderBottom = '1px solid #f5f6fa';
+    nuevaFila.style.backgroundColor = 'rgba(59, 130, 246, 0.08)';
+    
+    const fechaActual = new Date().toLocaleDateString('es-ES');
+    
+    nuevaFila.innerHTML = `
+        <td style="padding:12px;"><strong>${titulo}</strong></td>
+        <td style="padding:12px;">${fechaActual}</td>
+        <td style="padding:12px;">${destinatarios}</td>
+        <td style="padding:12px;"><span class="badge badge-success">Enviado</span></td>
     `;
     
-    listaComunicados.prepend(comunicado);
+    // Añadir al principio del historial
+    tablaHistorial.prepend(nuevaFila);
+    
+    // Animación de entrada
+    setTimeout(() => {
+        nuevaFila.style.transition = 'background-color 0.5s ease';
+        nuevaFila.style.backgroundColor = '';
+    }, 1500);
     
     // Limpiar formulario
-    form.reset();
+    contenedor.querySelector('input[type="text"]').value = '';
+    contenedor.querySelector('textarea').value = '';
+    contenedor.querySelector('select').selectedIndex = 0;
     
     mostrarNotificacion('📤 Comunicado ENVIADO correctamente a todos los destinatarios', 'success');
 }

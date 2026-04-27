@@ -63,5 +63,7 @@ requireRole(['jefe_departamento', 'admin']);
             </div>
         </div>
     </div>
+
+    <script src="../assets/js/funcionalidad-botones.js"></script>
 </body>
 </html>

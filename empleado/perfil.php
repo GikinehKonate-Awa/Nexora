@@ -1,12 +1,35 @@
 <?php
 require_once '../config.php';
 require_once '../includes/auth.php';
+require_once '../includes/db.php';
 requireAuth();
 requireRole(['empleado']);
 
 $db = getDB();
-$stmt = $db->prepare("SELECT * FROM empleados WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
+$usuario_id = $_SESSION['user_id'];
+
+// Procesar formulario
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nombre = trim($_POST['nombre']);
+    $apellidos = trim($_POST['apellidos']);
+    
+    if (empty($nombre) || empty($apellidos)) {
+        $error = "Debes completar todos los campos";
+    } else {
+        $stmt = $db->prepare("UPDATE empleados SET nombre = ?, apellidos = ? WHERE id = ?");
+        $stmt->execute([$nombre, $apellidos, $usuario_id]);
+        
+        // Actualizar sesión
+        $_SESSION['user_nombre'] = $nombre;
+        $_SESSION['user_apellidos'] = $apellidos;
+        
+        header("Location: perfil.php?mensaje=Datos actualizados correctamente");
+        exit;
+    }
+}
+
+$stmt = $db->prepare("SELECT e.*, d.nombre as departamento FROM empleados e LEFT JOIN departamentos d ON e.departamento_id = d.id WHERE e.id = ?");
+$stmt->execute([$usuario_id]);
 $empleado = $stmt->fetch();
 ?>
 <!DOCTYPE html>
@@ -40,24 +63,40 @@ $empleado = $stmt->fetch();
                     <div class="card">
                         <div class="card-title">Datos personales</div>
                         <div style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Nombre</label>
-                                <input type="text" class="form-input" value="<?= $_SESSION['user_nombre'] ?>">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Apellidos</label>
-                                <input type="text" class="form-input" value="<?= $_SESSION['user_apellidos'] ?>">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Departamento</label>
-                                <input type="text" class="form-input" value="Desarrollo" disabled>
-                            </div>
-                            <button class="btn btn-primary">Guardar Cambios</button>
+                            <form method="POST">
+                                <div class="form-group">
+                                    <label class="form-label">Nombre</label>
+                                    <input type="text" name="nombre" class="form-input" value="<?= $empleado['nombre'] ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Apellidos</label>
+                                    <input type="text" name="apellidos" class="form-input" value="<?= $empleado['apellidos'] ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Departamento</label>
+                                    <input type="text" class="form-input" value="<?= $empleado['departamento'] ?>" disabled readonly>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+</div>
+
+<script>
+<?php if(isset($_GET['mensaje'])): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    mostrarNotificacion('✅ <?= $_GET['mensaje'] ?>', 'success');
+});
+<?php endif; ?>
+
+<?php if(isset($error)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    mostrarNotificacion('⚠️ <?= $error ?>', 'error');
+});
+<?php endif; ?>
+</script>
 </body>
 </html>

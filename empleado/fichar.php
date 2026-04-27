@@ -1,11 +1,75 @@
 <?php
 require_once '../config.php';
 require_once '../includes/auth.php';
+require_once '../includes/db.php';
 requireAuth();
 requireRole(['empleado']);
 
+$db = getDB();
+$usuario_id = $_SESSION['user_id'];
+$hoy = date('Y-m-d');
 $vpn_status = isVPNConnected();
 $user_ip = getUserIP();
+
+// Procesar fichaje normal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'fichar') {
+    $tiene_entrada = $db->query("SELECT id FROM fichajes WHERE empleado_id = $usuario_id AND tipo = 'entrada' AND DATE(fecha_hora) = '$hoy' LIMIT 1")->fetchColumn();
+    $tiene_salida = $db->query("SELECT id FROM fichajes WHERE empleado_id = $usuario_id AND tipo = 'salida' AND DATE(fecha_hora) = '$hoy' LIMIT 1")->fetchColumn();
+    
+    $tipo = !$tiene_entrada ? 'entrada' : 'salida';
+    
+    if ($tipo === 'salida' && $tiene_salida) {
+        header("Location: fichar.php?mensaje=Ya has registrado salida hoy");
+        exit;
+    }
+    
+    $stmt = $db->prepare("INSERT INTO fichajes (empleado_id, tipo, fecha_hora, ip_origen, vpn_detectada) VALUES (?, ?, NOW(), ?, ?)");
+    $stmt->execute([$usuario_id, $tipo, $user_ip, $vpn_status ? 1 : 0]);
+    
+    header("Location: fichar.php?mensaje=" . ucfirst($tipo) . " registrada correctamente a las " . date('H:i'));
+    exit;
+}
+
+// Procesar registro manual
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comentario'])) {
+    $comentario = trim($_POST['comentario']);
+    
+    if (empty($comentario)) {
+        $error = "Debes introducir un motivo para el registro manual";
+    } else {
+        $stmt = $db->prepare("INSERT INTO fichajes (empleado_id, tipo, fecha_hora, ip_origen, vpn_detectada, es_manual, comentario) VALUES (?, 'salida', NOW(), ?, ?, 1, ?)");
+        $stmt->execute([$usuario_id, $user_ip, $vpn_status ? 1 : 0, $comentario]);
+        
+        header("Location: fichar.php?mensaje=Salida manual registrada correctamente. Pendiente de aprobación por RRHH");
+        exit;
+    }
+}
+
+// Obtener estado actual
+$fichaje_entrada = $db->query("SELECT fecha_hora FROM fichajes WHERE empleado_id = $usuario_id AND tipo = 'entrada' AND DATE(fecha_hora) = '$hoy' ORDER BY fecha_hora ASC LIMIT 1")->fetchColumn();
+$fichaje_salida = $db->query("SELECT fecha_hora FROM fichajes WHERE empleado_id = $usuario_id AND tipo = 'salida' AND DATE(fecha_hora) = '$hoy' ORDER BY fecha_hora DESC LIMIT 1")->fetchColumn();
+
+// Obtener historial de hoy
+$fichajes_hoy = $db->query("
+    SELECT TIME(fecha_hora) as hora, tipo, es_manual, validado, ip_origen 
+    FROM fichajes 
+    WHERE empleado_id = $usuario_id AND DATE(fecha_hora) = '$hoy' 
+    ORDER BY fecha_hora ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Determinar texto y boton
+$estado_texto = "Aún no has fichado hoy";
+$boton_texto = "Registrar Entrada";
+
+if ($fichaje_entrada && !$fichaje_salida) {
+    $estado_texto = "✅ Fichado correctamente - Trabajando desde " . date('H:i', strtotime($fichaje_entrada));
+    $boton_texto = "Registrar Salida";
+}
+
+if ($fichaje_entrada && $fichaje_salida) {
+    $estado_texto = "✅ Jornada finalizada hoy. Horas: " . gmdate('H:i', strtotime($fichaje_salida) - strtotime($fichaje_entrada));
+    $boton_texto = "Ya has fichado hoy";
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -39,13 +103,16 @@ $user_ip = getUserIP();
                             </svg>
                         </div>
                         
-                        <h3 id="estadoTexto">Aún no has fichado hoy</h3>
+                        <h3 id="estadoTexto"><?= $estado_texto ?></h3>
                         <p style="color:#6b7280; margin-top:8px;">IP: <?= $user_ip ?></p>
                     </div>
                     
-                    <button id="btnFichar" class="btn btn-primary btn-large" onclick="registrarFichaje()" <?= !$vpn_status && $_SESSION['user_modalidad'] === 'presencial' ? 'disabled' : '' ?>>
-                        Registrar Entrada
-                    </button>
+                    <form method="POST">
+                        <input type="hidden" name="accion" value="fichar">
+                        <button id="btnFichar" type="submit" class="btn btn-primary btn-large" <?= (!$vpn_status && $_SESSION['user_modalidad'] === 'presencial') || ($fichaje_entrada && $fichaje_salida) ? 'disabled' : '' ?>>
+                            <?= $boton_texto ?>
+                        </button>
+                    </form>
                     
                     <?php if(!$vpn_status && $_SESSION['user_modalidad'] === 'presencial'): ?>
                     <p style="color:#ef4444; margin-top:16px; font-size:14px;">
@@ -83,9 +150,29 @@ $user_ip = getUserIP();
                             </tr>
                         </thead>
                         <tbody id="historialFichajes">
+                            <?php if (count($fichajes_hoy) > 0): ?>
+                                <?php foreach ($fichajes_hoy as $fichaje): ?>
+                                <tr>
+                                    <td style="padding:12px;"><?= date('H:i', strtotime($fichaje['hora'])) ?></td>
+                                    <td style="padding:12px;">
+                                        <span class="badge <?= $fichaje['tipo'] == 'entrada' ? 'badge-success' : 'badge-info' ?>">
+                                            <?= ucfirst($fichaje['tipo']) ?>
+                                            <?= $fichaje['es_manual'] ? ' (Manual)' : '' ?>
+                                        </span>
+                                    </td>
+                                    <td style="padding:12px;">
+                                        <span class="badge <?= $fichaje['validado'] ? 'badge-success' : 'badge-warning' ?>">
+                                            <?= $fichaje['validado'] ? 'Validado' : ($fichaje['es_manual'] ? 'Pendiente revisión' : 'OK') ?>
+                                        </span>
+                                    </td>
+                                    <td style="padding:12px;"><?= $fichaje['ip_origen'] ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
                             <tr>
                                 <td colspan="4" style="text-align:center; padding:24px; color:#6b7280;">No hay registros hoy</td>
                             </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -94,9 +181,17 @@ $user_ip = getUserIP();
     </div>
     
     <script>
-        function registrarFichaje() {
-            alert('Fichaje registrado correctamente');
-        }
+    <?php if(isset($_GET['mensaje'])): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            mostrarNotificacion('✅ <?= $_GET['mensaje'] ?>', 'success');
+        });
+    <?php endif; ?>
+    
+    <?php if(isset($error)): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            mostrarNotificacion('⚠️ <?= $error ?>', 'error');
+        });
+    <?php endif; ?>
     </script>
 </body>
 </html>

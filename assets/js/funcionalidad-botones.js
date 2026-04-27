@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function inicializarSistemaFuncionalidad() {
+    // 🔴 EXCEPCION: SI ESTAMOS EN LA PAGINA DE FICHAR NO HACEMOS NADA
+    // ESTA PAGINA TIENE SUS PROPIOS FORMULARIOS NATIVOS QUE NO DEBEN SER INTERCEPTADOS
+    if(window.location.pathname.includes('fichar.php')) {
+        console.log('⏭️ Pagina fichar.php detectada - No se inicializa sistema de botones para permitir funcionamiento nativo');
+        return;
+    }
+
     // Seleccionar TODOS los botones, enlaces y elementos interactivos
     // ✅ INCLUIDOS LOS SPAN, BADGES, LABELS Y ETIQUETAS QUE ACTUAN COMO BOTONES
     const elementosInteractivos = document.querySelectorAll('button, a, [class*="btn"], input[type="button"], input[type="submit"], span, [class*="badge"], [class*="label"], [role="button"]');
@@ -142,6 +149,14 @@ function manejarClicElemento(evento) {
     const datos = JSON.parse(elemento.dataset.datos);
     const nombreFuncion = elemento.dataset.funcionalidad.toLowerCase().trim();
     const descripcion = elemento.dataset.descripcion;
+
+    // ✅ EXCEPCION ESPECIAL PARA LA PAGINA DE FICHAR
+    // Si estamos en fichar.php y es un boton de submit de formulario DEJAMOS QUE FUNCIONE NORMALMENTE
+    if(window.location.pathname.includes('fichar.php') && elemento.type === 'submit') {
+        // No hacemos NADA, dejamos que el formulario haga su trabajo nativo
+        // No ejecutamos nada, no prevenimos nada, simplemente devolvemos
+        return true;
+    }
     
     // ✅ EJECUTAR FUNCION REAL SEGUN EL NOMBRE DEL BOTON
     ejecutarFuncionReal(nombreFuncion, elemento, datos, evento);
@@ -160,8 +175,8 @@ function manejarClicElemento(evento) {
  */
 function ejecutarFuncionReal(nombreBoton, elemento, datos, evento) {
     // No prevenir accion por defecto por defecto, solo si es necesario
-    // Solo prevenimos el comportamiento por defecto para botones que no son enlaces
-    if(elemento.tagName !== 'A' && evento) {
+    // NO prevenimos el comportamiento por defecto para botones de SUBMIT de formularios
+    if(elemento.tagName !== 'A' && evento && !(elemento.type === 'submit' && elemento.closest('form'))) {
         evento.preventDefault();
     }
 
@@ -1470,11 +1485,35 @@ function registrarFichaje(tipo) {
     // Accion REAL: Registrar fichaje con marca de tiempo
     const ahora = new Date().toLocaleTimeString('es-ES');
     const fecha = new Date().toLocaleDateString('es-ES');
-    const esEntrada = tipo.includes('entrada');
+    const esEntrada = localStorage.getItem('ultimoFichaje') !== 'entrada';
+    
+    // Guardar en localStorage para persistir entre paginas
+    if(esEntrada) {
+        localStorage.setItem('horaEntrada', ahora);
+        localStorage.setItem('ultimoFichaje', 'entrada');
+    } else {
+        localStorage.setItem('horaSalida', ahora);
+        localStorage.setItem('ultimoFichaje', 'salida');
+    }
+    
+    // Guardar historial
+    let historial = JSON.parse(localStorage.getItem('historialFichajes') || '[]');
+    historial.unshift({
+        fecha: fecha,
+        tipo: esEntrada ? 'ENTRADA' : 'SALIDA',
+        hora: ahora,
+        estado: '✅ REGISTRADO'
+    });
+    localStorage.setItem('historialFichajes', JSON.stringify(historial.slice(0, 10)));
     
     // Crear entrada en la tabla si existe
     const tabla = document.querySelector('table tbody');
     if(tabla) {
+        const primeraFila = tabla.querySelector('tr:first-child');
+        if(primeraFila && primeraFila.textContent.includes('No hay registros')) {
+            primeraFila.remove();
+        }
+        
         const nuevaFila = document.createElement('tr');
         nuevaFila.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
         nuevaFila.innerHTML = `
@@ -1487,13 +1526,86 @@ function registrarFichaje(tipo) {
     }
     
     // Cambiar estado del boton
-    const boton = document.querySelector('[data-funcionalidad*="fichar"]');
+    const boton = document.getElementById('btnFichar');
     if(boton) {
         boton.innerHTML = esEntrada ? '⏰ FICHAR SALIDA' : '⏰ FICHAR ENTRADA';
+        document.getElementById('estadoTexto').textContent = esEntrada ? 'Estás fichado de entrada' : 'Has finalizado tu jornada';
     }
+    
+    // Actualizar automaticamente la pagina de inicio si esta abierta
+    window.addEventListener('storage', function(e) {
+        if(e.key === 'horaEntrada' || e.key === 'horaSalida') {
+            actualizarDatosInicio();
+        }
+    });
+    
+    // Actualizar datos actuales
+    actualizarDatosInicio();
     
     mostrarNotificacion(`⏰ ${esEntrada ? 'ENTRADA' : 'SALIDA'} REGISTRADA correctamente a las ${ahora}`, 'success');
 }
+
+// Funcion para actualizar datos en la pagina de inicio
+function actualizarDatosInicio() {
+    const horaEntrada = localStorage.getItem('horaEntrada');
+    const horaSalida = localStorage.getItem('horaSalida');
+    const historial = JSON.parse(localStorage.getItem('historialFichajes') || '[]');
+    
+    // Actualizar tarjetas del inicio
+    if(document.getElementById('estadoFichaje')) {
+        if(horaSalida) {
+            document.getElementById('estadoFichaje').textContent = 'Jornada finalizada';
+        } else if(horaEntrada) {
+            document.getElementById('estadoFichaje').textContent = 'Trabajando';
+        }
+    }
+    
+    // Actualizar cuadros de entrada/salida
+    const elementosEntrada = document.querySelectorAll('div:nth-child(1) > div:first-child');
+    elementosEntrada.forEach(el => {
+        if(el.textContent === '--:--' && horaEntrada) {
+            el.textContent = horaEntrada;
+        }
+    });
+    
+    const elementosSalida = document.querySelectorAll('div:nth-child(2) > div:first-child');
+    elementosSalida.forEach(el => {
+        if(el.textContent === '--:--' && horaSalida) {
+            el.textContent = horaSalida;
+        }
+    });
+    
+    // Actualizar tabla de ultimos fichajes
+    const tablaInicio = document.querySelector('#ultimosFichajes tbody');
+    if(tablaInicio && historial.length > 0) {
+        const primeraFila = tablaInicio.querySelector('tr:first-child');
+        if(primeraFila && primeraFila.textContent.includes('No hay registros')) {
+            primeraFila.remove();
+        }
+        
+        historial.slice(0, 5).forEach(fichaje => {
+            const existe = Array.from(tablaInicio.querySelectorAll('tr')).some(tr => 
+                tr.textContent.includes(fichaje.hora) && tr.textContent.includes(fichaje.tipo)
+            );
+            
+            if(!existe) {
+                const nuevaFila = document.createElement('tr');
+                nuevaFila.style.borderBottom = '1px solid #f5f6fa';
+                nuevaFila.innerHTML = `
+                    <td style="padding:12px 8px;">${fichaje.fecha}</td>
+                    <td style="padding:12px 8px;"><span class="badge badge-${fichaje.tipo === 'ENTRADA' ? 'success' : 'info'}">${fichaje.tipo}</span></td>
+                    <td style="padding:12px 8px;">${fichaje.hora}</td>
+                `;
+                tablaInicio.prepend(nuevaFila);
+            }
+        });
+    }
+}
+
+// Cargar automaticamente los datos al abrir cualquier pagina
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(actualizarDatosInicio, 200);
+});
 
 function enviarSolicitud() {
     // Accion REAL: Enviar solicitud y agregar a la lista

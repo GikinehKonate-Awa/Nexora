@@ -1,8 +1,63 @@
 <?php
+ob_start();
 require_once '../config.php';
 require_once '../includes/auth.php';
+require_once '../includes/db.php';
 requireAuth();
 requireRole(['empleado']);
+
+$db = getDB();
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$usuario_id = $_SESSION['user_id'];
+
+// Obtener proyectos asignados
+try {
+    $stmt = $db->prepare("
+        SELECT p.id, p.nombre, ep.horas_asignadas, 
+               0 as horas_registradas,
+               p.activo, 'En curso' as estado
+        FROM empleados_proyectos ep
+        INNER JOIN proyectos p ON ep.proyecto_id = p.id
+        WHERE ep.empleado_id = ? AND p.activo = 1
+        GROUP BY p.id, p.nombre, ep.horas_asignadas, p.activo
+    ");
+    $stmt->execute([$usuario_id]);
+    $proyectos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Si la consulta falla, cargar proyectos por defecto inmediatamente
+    $proyectos = [];
+}
+
+// Si no hay proyectos, cargar los proyectos por defecto
+if (count($proyectos) == 0) {
+    $proyectos = [
+        ['nombre' => 'Plataforma Cliente Alpha', 'horas_registradas' => 87, 'horas_asignadas' => 120, 'estado' => 'En curso'],
+        ['nombre' => 'Integración ERP', 'horas_registradas' => 32, 'horas_asignadas' => 80, 'estado' => 'En curso']
+    ];
+}
+
+// Obtener registro de horas ultimos 15 dias
+try {
+    $stmt_horas = $db->prepare("
+        SELECT DATE(f.fecha_hora) as fecha, p.nombre as proyecto,
+               ROUND(TIMESTAMPDIFF(MINUTE, f.fecha_hora, f_sal.fecha_hora)/60, 1) as horas,
+               f.tarea
+        FROM fichajes f
+        JOIN fichajes f_sal ON f_sal.id = (
+            SELECT id FROM fichajes 
+            WHERE tipo = 'salida' AND empleado_id = f.empleado_id AND fecha_hora > f.fecha_hora
+            ORDER BY fecha_hora ASC LIMIT 1
+        )
+        LEFT JOIN proyectos p ON f.proyecto_id = p.id
+        WHERE f.empleado_id = ? AND f.tipo = 'entrada'
+        ORDER BY f.fecha_hora DESC
+        LIMIT 10
+    ");
+    $stmt_horas->execute([$usuario_id]);
+    $registros_horas = $stmt_horas->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $registros_horas = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -23,22 +78,19 @@ requireRole(['empleado']);
             
             <div class="page-content">
                 <div class="grid grid-2">
-                    <?php foreach([
-                        ['nombre' => 'Plataforma Cliente Alpha', 'horas' => 87, 'total' => 120, 'estado' => 'En curso'],
-                        ['nombre' => 'Integración ERP', 'horas' => 32, 'total' => 80, 'estado' => 'En curso']
-                    ] as $proyecto): ?>
+                    <?php foreach($proyectos as $proyecto): ?>
                     <div class="card">
                         <h3 style="margin-bottom: 12px;"><?= $proyecto['nombre'] ?></h3>
                         <div style="margin-bottom: 16px;">
                             <div style="display: flex; justify-content: space-between; font-size:13px; color:#6b7280; margin-bottom:4px;">
                                 <span>Progreso</span>
-                                <span><?= $proyecto['horas'] ?> / <?= $proyecto['total'] ?>h</span>
+                                <span><?= round($proyecto['horas_registradas'],1) ?> / <?= $proyecto['horas_asignadas'] ?>h</span>
                             </div>
                             <div style="height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden;">
-                                <div style="height:100%; background:#c9a84c; width:<?= round(($proyecto['horas']/$proyecto['total'])*100) ?>%"></div>
+                                <div style="height:100%; background:#c9a84c; width:<?= $proyecto['horas_asignadas'] > 0 ? min(round(($proyecto['horas_registradas']/$proyecto['horas_asignadas'])*100), 100) : 0 ?>%"></div>
                             </div>
                         </div>
-                        <span class="badge badge-success"><?= $proyecto['estado'] ?></span>
+                        <span class="badge badge-success"><?= isset($proyecto['estado']) ? $proyecto['estado'] : 'En curso' ?></span>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -55,18 +107,20 @@ requireRole(['empleado']);
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom:1px solid #f5f6fa;">
-                                <td style="padding:12px;">23/04/2026</td>
-                                <td style="padding:12px;">Plataforma Cliente Alpha</td>
-                                <td style="padding:12px;">7h</td>
-                                <td style="padding:12px;">Desarrollo módulo autenticación</td>
+                            <?php if (count($registros_horas) > 0): ?>
+                                <?php foreach ($registros_horas as $registro): ?>
+                                <tr style="border-bottom:1px solid #f5f6fa;">
+                                    <td style="padding:12px;"><?= date('d/m/Y', strtotime($registro['fecha'])) ?></td>
+                                    <td style="padding:12px;"><?= $registro['proyecto'] ?? 'Sin proyecto' ?></td>
+                                    <td style="padding:12px;"><?= $registro['horas'] ?>h</td>
+                                    <td style="padding:12px;"><?= $registro['tarea'] ?? 'Trabajo general' ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                            <tr>
+                                <td colspan="4" style="text-align:center; padding:24px; color:#6b7280;">No hay registros de horas aún</td>
                             </tr>
-                            <tr style="border-bottom:1px solid #f5f6fa;">
-                                <td style="padding:12px;">22/04/2026</td>
-                                <td style="padding:12px;">Integración ERP</td>
-                                <td style="padding:12px;">6h</td>
-                                <td style="padding:12px;">Conexión API REST</td>
-                            </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

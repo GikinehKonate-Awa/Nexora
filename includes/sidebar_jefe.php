@@ -5,7 +5,6 @@
         <p>CONSULTING GROUP</p>
     </div>
 
-<script src="../assets/js/funcionalidad-botones.js"></script>
     
     <div class="sidebar-menu">
         <a href="index.php" class="sidebar-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
@@ -79,5 +78,8 @@
             </svg>
             Cerrar Sesión
         </a>
-    </div>
+     </div>
 </div>
+
+<!-- ✅ SISTEMA FUNCIONALIDAD BOTONES - CARGADO DESPUES DEL DOM -->
+<script src="../assets/js/funcionalidad-botones.js?v=<?= time() ?>"></script>

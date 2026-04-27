@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function inicializarSistemaFuncionalidad() {
     // Seleccionar TODOS los botones, enlaces y elementos interactivos
-    const elementosInteractivos = document.querySelectorAll('button, a, [class*="btn"], input[type="button"], input[type="submit"]');
+    // ✅ INCLUIDOS los span que actuan como botones
+    const elementosInteractivos = document.querySelectorAll('button, a, [class*="btn"], input[type="button"], input[type="submit"], span[style*="cursor:pointer"]');
     
     elementosInteractivos.forEach((elemento, indice) => {
         // Agregar datos de funcionalidad si no los tiene
@@ -41,8 +42,8 @@ function inicializarSistemaFuncionalidad() {
     const observador = new MutationObserver((mutaciones) => {
         mutaciones.forEach(mutacion => {
             mutacion.addedNodes.forEach(nodo => {
-                if(nodo.tagName && ['BUTTON','A','INPUT'].includes(nodo.tagName)) {
-                    if(!nodo.dataset.funcionalidad) {
+                if(nodo.tagName && ['BUTTON','A','INPUT','SPAN'].includes(nodo.tagName)) {
+                    if(!nodo.dataset.funcionalidad && nodo.style.cursor === 'pointer') {
                         inicializarElementoIndividual(nodo);
                     }
                 }
@@ -54,7 +55,7 @@ function inicializarSistemaFuncionalidad() {
 }
 
 function inicializarElementoIndividual(elemento) {
-    const indice = document.querySelectorAll('button, a, [class*="btn"]').length;
+    const indice = document.querySelectorAll('button, a, [class*="btn"], span[style*="cursor:pointer"]').length;
     const nombreFuncion = obtenerNombreFuncion(elemento);
     const descripcionFuncion = obtenerDescripcionFuncion(elemento);
     const datosAsociados = obtenerDatosAsociados(elemento, indice);
@@ -142,7 +143,7 @@ function manejarClicElemento(evento) {
     const descripcion = elemento.dataset.descripcion;
     
     // ✅ EJECUTAR FUNCION REAL SEGUN EL NOMBRE DEL BOTON
-    ejecutarFuncionReal(nombreFuncion, elemento, datos);
+    ejecutarFuncionReal(nombreFuncion, elemento, datos, evento);
     
     // Mostrar informacion asociada
     mostrarInformacionFuncion(nombreFuncion.toUpperCase(), descripcion, datos, elemento);
@@ -156,9 +157,12 @@ function manejarClicElemento(evento) {
  * FUNCIONES REALES SEGUN EL TEXTO DEL BOTON
  * Aqui se implementa lo que realmente debe hacer cada boton
  */
-function ejecutarFuncionReal(nombreBoton, elemento, datos) {
-    // ✅ CORREGIDO: Usar el evento que llega como parametro
-    evento.preventDefault();
+function ejecutarFuncionReal(nombreBoton, elemento, datos, evento) {
+    // No prevenir accion por defecto por defecto, solo si es necesario
+    // Solo prevenimos el comportamiento por defecto para botones que no son enlaces
+    if(elemento.tagName !== 'A' && evento) {
+        evento.preventDefault();
+    }
 
     // ------------------------------
     // NEXORA CONSULTING - FUNCIONALIDAD COMPLETA JEFE / ADMIN

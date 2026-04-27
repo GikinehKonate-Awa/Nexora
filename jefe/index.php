@@ -167,5 +167,17 @@ requireRole(['jefe_departamento', 'admin']);
     cargarIncumplimientos();
     setInterval(cargarIncumplimientos, 300000);
     </script>
+
+    <!-- ✅ SISTEMA FUNCIONALIDAD BOTONES - CARGADO AL FINAL DESPUES DE TODO EL DOM -->
+    <script src="../assets/js/funcionalidad-botones.js?v=<?= time() ?>"></script>
+    <script>
+        // ✅ INICIALIZACION FORZADA DESPUES DE QUE TODO ESTE CARGADO
+        setTimeout(function() {
+            console.log('🔧 Inicializando sistema de botones manualmente...');
+            inicializarSistemaFuncionalidad();
+            console.log('✅ Sistema de botones ACTIVADO correctamente');
+        }, 100);
+    </script>
+
 </body>
 </html>

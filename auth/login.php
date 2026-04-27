@@ -79,6 +79,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
         
+        <div style="text-align:center; margin-top:24px;">
+            <a href="register.php" style="color:#1a2744; text-decoration:none; font-size:14px;">¿No tienes cuenta? Crear cuenta nueva</a>
+        </div>
+        
         <div style="text-align:center; margin-top:32px; font-size:12px; color:#6b7280;">
             © <?= date('Y') ?> NEXORA CONSULTING GROUP. Todos los derechos reservados.
         </div>

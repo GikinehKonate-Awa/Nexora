@@ -4,6 +4,8 @@
         <h1>NEXORA<span>.</span></h1>
         <p>CONSULTING GROUP</p>
     </div>
+
+<script src="../assets/js/funcionalidad-botones.js"></script>
     
     <div class="sidebar-menu">
         <a href="index.php" class="sidebar-item <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">

@@ -1,11 +1,23 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once '../config.php';
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 
 // Solo permitir acceso a jefes y administradores
-requireAuth();
-requireRole(['jefe_departamento', 'admin']);
+if(!isLoggedIn()) {
+    redirect('../auth/login.php');
+    exit;
+}
+
+if(!in_array($_SESSION['user_rol'], ['jefe_departamento', 'admin'])) {
+    die("Acceso denegado. Esta página solo es para jefes y administradores.");
+}
+
+// Obtener conexión PDO
+$pdo = getDB();
 
 $error = '';
 $success = '';

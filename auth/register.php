@@ -1,11 +1,18 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once '../config.php';
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 
 if(isLoggedIn()) {
     redirect('../empleado/index.php');
+    exit;
 }
+
+// Obtener conexión PDO
+$pdo = getDB();
 
 $error = '';
 $success = '';

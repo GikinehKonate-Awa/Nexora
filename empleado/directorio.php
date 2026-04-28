@@ -28,6 +28,13 @@ $sql .= "ORDER BY e.apellidos ASC";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directorio Empleados</title>
     <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
@@ -48,9 +55,14 @@ $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </form>
                 </div>
 
-        <?php if ($busqueda): ?>
         <div class="card" style="margin-top:24px;">
-            <div class="card-title">Resultados de búsqueda (<?= count($resultados) ?>)</div>
+            <div class="card-title">
+                <?php if ($busqueda): ?>
+                    Resultados de búsqueda (<?= count($resultados) ?>)
+                <?php else: ?>
+                    Todos los empleados (<?= count($resultados) ?>)
+                <?php endif; ?>
+            </div>
             
             <?php if (count($resultados) > 0): ?>
                     <table style="width:100%; margin-top:16px;">
@@ -81,7 +93,6 @@ $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <?php endif; ?>
                 </div>
-                <?php endif; ?>
 
             </div>
         </div>
